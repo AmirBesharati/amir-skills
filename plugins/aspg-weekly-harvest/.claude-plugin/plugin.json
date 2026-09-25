@@ -1,7 +1,7 @@
 {
   "name": "aspg-weekly-harvest",
-  "version": "1.3.0",
-  "description": "ASPG Weekly Harvest — scans the last 7 days of Outlook/Calendar/Teams for shareable customer, partner, and opportunity signals, and renders a review page (checkboxes, editable wording) with a one-click Contribute button (host: MCP addressing), falling back per-row to a paste-back-to-chat step, instead of copy-pasting the original starter prompt every week.",
+  "version": "1.4.0",
+  "description": "ASPG Weekly Harvest — scans the last 7 days of Outlook/Calendar/Teams for shareable customer, partner, and opportunity signals, and renders a review page (checkboxes, editable wording) with a one-click Contribute button (plain-connector-name MCP addressing), falling back per-row to a paste-back-to-chat step, instead of copy-pasting the original starter prompt every week.",
   "author": {
     "name": "Amir Besharati"
   }

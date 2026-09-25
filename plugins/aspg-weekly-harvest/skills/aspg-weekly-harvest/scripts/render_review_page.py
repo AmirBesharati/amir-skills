@@ -6,12 +6,12 @@ Demo_Contribution_Review_Page.html (ASPG_V3_Contribution_Guide pack,
 2026-09-18) — checkbox per row, editable headline/detail/entity, category /
 confidence / profit-center dropdowns, an "open opportunity" toggle. The
 Contribute button attempts a one-click direct submit through the `mcp`
-capability, addressed as a `host:` (Desktop Extension) server this time —
-see references/mcp-capability.md for why: a first attempt addressed as a
-plain connector name failed consistently and was removed, and this repo's
-own marketplace manifest says these MCP servers are distributed as Desktop
-Extensions, which the `mcp` capability addresses differently. On any
-failure, the button falls back per-row to exactly the CTO's original
+capability, addressed as the plain connector display name — see
+references/mcp-capability.md for the full history: a `host:` (Desktop
+Extension) addressing was tried in between and is confirmed dead (Claude
+Code refuses to publish that manifest at all, and a live listTools() call
+against it came back empty), so this reverts to the plain-name addressing.
+On any failure, the button falls back per-row to exactly the CTO's original
 behavior: assemble a paste-able text block for the chat.
 
 Only the standard library. Python 3.9+.
@@ -29,25 +29,26 @@ import argparse
 import html
 import json
 import pathlib
-import re
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 CSS_PATH = HERE.parent / "assets" / "review-page.css"
 
-# Keep these in sync with references/mcp-capability.md.
+# Keep this in sync with references/mcp-capability.md.
 #
 # DEV-ONLY, DELIBERATELY (2026-09-24): pinned to the dev connector so
 # testing this skill can never write fake/test harvest data into prod ASPG.
 # Before this skill goes anywhere near another colleague, this must change
 # back to the real prod connector name on purpose.
+#
+# Addressed as the plain connector display name (attempt #3, 2026-09-25).
+# `host:SPG_MCP_Gateway_Dev` (attempt #2) is confirmed dead: Claude Code
+# refuses to even publish a manifest naming it ("host servers aren't
+# available in this session"), and a live listTools() call against it from
+# inside the Desktop app came back with an empty server list -- this
+# connector is not actually reachable as a host: bridge. See
+# references/mcp-capability.md for the full record.
 MCP_CONNECTOR_NAME = "SPG MCP Gateway Dev"
-
-# The `mcp` capability's own rule for a host: (Desktop Extension) server
-# name: the display name with anything outside [A-Za-z0-9_-] replaced by
-# `_`. Computed rather than hand-typed so it can never drift from
-# MCP_CONNECTOR_NAME.
-MCP_HOST_SERVER = "host:" + re.sub(r"[^A-Za-z0-9_-]", "_", MCP_CONNECTOR_NAME)
 
 CONTRIBUTE_TOOL = "mcp-aspg_contribute"
 PROPOSE_ENTITY_TOOL = "mcp-aspg_proposeEntity"
@@ -227,7 +228,6 @@ def build_html(data: dict) -> str:
 <script>
 const DATA = {data_json};
 const MCP_CONNECTOR_NAME = {json.dumps(MCP_CONNECTOR_NAME)};
-const MCP_HOST_SERVER = {json.dumps(MCP_HOST_SERVER)};
 const CONTRIBUTE_TOOL = {json.dumps(CONTRIBUTE_TOOL)};
 const PROPOSE_ENTITY_TOOL = {json.dumps(PROPOSE_ENTITY_TOOL)};
 const CATEGORY_TO_ENTITY_TYPE = {json.dumps(CATEGORY_TO_ENTITY_TYPE)};
@@ -428,7 +428,7 @@ const PAGE_LEVEL_CODES = new Set([
 function pageLevelMessage(code) {{
   switch (code) {{
     case 'needs_reauth': return `[${{code}}] Reconnect ${{MCP_CONNECTOR_NAME}} in Settings → Connectors, then reopen this page.`;
-    case 'server_not_connected': return `[${{code}}] This only works inside the Claude Desktop app, viewing this exact artifact as its owner -- not a browser tab. If you're already in Desktop, the local server/extension may not be running.`;
+    case 'server_not_connected': return `[${{code}}] ${{MCP_CONNECTOR_NAME}} isn't connected for this viewer. Connect it under Settings → Connectors, then reopen this page.`;
     case 'selection_required': return `[${{code}}] More than one matching connector is available — choose one, then reopen this page.`;
     case 'consent_required': return `[${{code}}] Allow ${{MCP_CONNECTOR_NAME}} for this page (look for a connector-permission notice, or a Claude Desktop confirmation dialog), then click Contribute again.`;
     case 'blocked_by_policy': return `[${{code}}] Your organization's policy blocks this tool from here. Use the copy-paste option below instead.`;
@@ -451,7 +451,7 @@ async function initMcp() {{
     return;
   }}
   try {{
-    mcpServerHandle = await mcp.server(MCP_HOST_SERVER);
+    mcpServerHandle = await mcp.server(MCP_CONNECTOR_NAME);
   }} catch (err) {{
     mcpServerHandle = null;
     showBanner('warn', pageLevelMessage(err && err.code));
@@ -459,9 +459,8 @@ async function initMcp() {{
 }}
 initMcp();
 
-// Read-only diagnostic -- reports what the mcp capability sees for both the
-// plain connector name and the host: (Desktop Extension) addressing, side
-// by side, so a failure can be diagnosed without devtools access. Never
+// Read-only diagnostic -- reports what the mcp capability sees for the
+// connector, so a failure can be diagnosed without devtools access. Never
 // calls contribute/proposeEntity.
 document.getElementById('btn-check').addEventListener('click', async () => {{
   const out = document.getElementById('output-text');
@@ -473,13 +472,11 @@ document.getElementById('btn-check').addEventListener('click', async () => {{
     const m = (window.claude && typeof window.claude.use === 'function') ? await window.claude.use('mcp') : null;
     report.push(`claude.use('mcp') resolved: ${{!!m}}`);
     if (m) {{
-      for (const name of [MCP_CONNECTOR_NAME, MCP_HOST_SERVER]) {{
-        try {{
-          const info = await m.listTools(name);
-          report.push(`listTools(${{name}}) => ` + JSON.stringify(info, null, 2));
-        }} catch (err) {{
-          report.push(`listTools(${{name}}) rejected:\\n` + dumpError(err));
-        }}
+      try {{
+        const info = await m.listTools(MCP_CONNECTOR_NAME);
+        report.push(`listTools(${{MCP_CONNECTOR_NAME}}) => ` + JSON.stringify(info, null, 2));
+      }} catch (err) {{
+        report.push(`listTools(${{MCP_CONNECTOR_NAME}}) rejected:\\n` + dumpError(err));
       }}
       try {{
         const info = await m.listTools();

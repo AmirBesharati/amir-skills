@@ -1,4 +1,4 @@
-# The review page's one-click Contribute button — attempt #2 (host: addressing)
+# The review page's one-click Contribute button — attempt #3 (back to plain-name addressing)
 
 The CTO's original design (`Demo_Contribution_Review_Page.html`) is
 deliberately a "dumb" static file: no backend, no network call, ever — the
@@ -11,7 +11,7 @@ capability, addressed as a plain connector name (`"SPG MCP Gateway Dev"`).
 Failed consistently — see "Attempt #1 record" below — and was removed at
 the user's explicit instruction.
 
-**Attempt #2** (2026-09-25, current): the user asked to re-implement it.
+**Attempt #2** (2026-09-25): the user asked to re-implement it.
 This repo's own marketplace manifest
 (`spg-claude-skills/.claude-plugin/marketplace.json`) says "MCP servers are
 distributed separately via Desktop Extensions (.mcpb)." If this connector
@@ -31,64 +31,78 @@ capabilities: {
 }
 ```
 
-`host:SPG_MCP_Gateway_Dev` is computed in `scripts/render_review_page.py`
-(`MCP_HOST_SERVER`) from `MCP_CONNECTOR_NAME` via the `mcp` capability's own
-sanitizing rule — anything outside `[A-Za-z0-9_-]` becomes `_` — never
-hand-typed, so it can't drift out of sync.
+`host:SPG_MCP_Gateway_Dev` was computed the same way `MCP_CONNECTOR_NAME` is
+used now — never hand-typed, so it couldn't drift out of sync — but this
+addressing is no longer in the code (see "Confirmed dead" below).
 
-**Blocked before it could even be tested (2026-09-25):** publishing this
-artifact with `server: "host:SPG_MCP_Gateway_Dev"` in the manifest was
-rejected outright, from this Claude Code session, at publish time:
+**Blocked at publish time (2026-09-25, first Claude Code session):**
+publishing an artifact with `server: "host:SPG_MCP_Gateway_Dev"` in the
+manifest was rejected outright, from Claude Code, at publish time:
 
 > `"host:SPG_MCP_Gateway_Dev" names a locally-configured MCP server, and
 > host servers aren't available in this session — declare only claude.ai
 > connectors`
 
-This is a restriction on the **publishing session**, separate from
-anything about the viewer's session — Claude Code apparently can't declare
-a `host:` manifest entry at all, regardless of whether it would resolve for
-a Desktop-app viewer. The artifact was republished with the plain
-`"SPG MCP Gateway Dev"` name in the manifest instead (attempt #1's
-addressing) so it isn't left broken, but the page's JS still *calls*
-`mcp.server(MCP_HOST_SERVER)` — since that name isn't in the manifest, that
-call will reject `not_in_manifest` immediately, on every page load, before
-a person even clicks anything. **Attempt #2 cannot be genuinely tested from
-this session as currently set up.**
+**Confirmed dead, not just untestable (2026-09-25, second Claude Code
+session):** re-verified the exact same publish-time rejection, byte-for-byte
+(a fresh minimal test artifact declaring `host:SPG_MCP_Gateway_Dev` was
+refused with identical wording). Then, since the artifact tool itself
+refuses to even discuss whether it *works* for a Desktop-app viewer, a
+second minimal test artifact was published declaring **both** addressings
+side by side (`SPG MCP Gateway Dev` succeeds at publish; `host:...` still
+rejected in the same call, so that entry had to be dropped to publish at
+all) and opened live in the real Claude Desktop app:
 
-The one path that might still work: publishing (or republishing) this same
-artifact from inside an actual claude.ai / Claude Desktop **chat**
-conversation, rather than from Claude Code — if the "host servers aren't
-available in this session" restriction is specific to Claude Code's own
-publishing path rather than universal, a chat-published version might
-accept the `host:` manifest entry where this session's Artifact tool call
-would not. Untested — flag this to whoever picks this up next.
+```
+listTools(SPG MCP Gateway Dev)      => OK, {servers: [{server: "SPG MCP Gateway Dev", authStatus: "unknown", ...}]}
+listTools(host:SPG_MCP_Gateway_Dev) => OK, {servers: []}
+```
 
-Known constraints on `host:` servers, per the capability's own docs — worth
-knowing before reading too much into a failure:
+`host:SPG_MCP_Gateway_Dev` doesn't error at runtime — it resolves to **no
+server at all**. This connector is not exposed as a host-type (Desktop
+Extension) bridge, regardless of what the marketplace manifest's "MCP
+servers are distributed separately via Desktop Extensions" line suggested.
+Combined with the permanent publish-time refusal, `host:` addressing for
+this connector is now considered a closed question, not merely blocked from
+one session type — no further host: testing is expected to help. The one
+untested theory from the first pass (publish from an actual claude.ai/Desktop
+**chat** rather than Claude Code) is superseded by this: even if a chat
+session could get past the manifest step, the runtime evidence above shows
+there'd be nothing on the other end to call.
+
+**Attempt #3** (2026-09-25, current): with `host:` closed, the user asked to
+revert to attempt #1's plain-name addressing and re-test live, since that
+was the only addressing that ever actually reached the connector — the
+`listTools()` evidence above confirms it still resolves to a real server.
+`scripts/render_review_page.py` and `SKILL.md` are back to declaring
+`{ server: "SPG MCP Gateway Dev", tools: [...] }` and calling
+`mcp.server("SPG MCP Gateway Dev")` directly — no `host:` anywhere, and the
+"Check connection" diagnostic now only checks this one addressing (checking
+`host:` too would have been misleading noise now that it's a closed
+question). **Whether attempt #1's `upstream_error` ("connector access isn't
+confirmed for this artifact right now") still reproduces on a real
+`contribute`/`proposeEntity` call has not been re-tested as of this
+writing** — only `listTools()` has been re-confirmed. Test live, on a real
+row, before trusting this with a real harvest.
+
+Known constraints on `host:` servers in general, per the capability's own
+docs — kept for background, though moot for this specific connector now:
 
 - Only works **inside the Claude Desktop app**, viewing the artifact
   top-level as its owner — never in a browser tab, an embedded drawer, or
-  as anyone other than the artifact's owner. Outside those conditions the
-  call fails `server_not_connected` unconditionally, which would look
-  identical to a genuine "no host bridge" failure — check the viewing
-  conditions before concluding the addressing itself is wrong.
+  as anyone other than the artifact's owner.
 - The app may pop its own confirmation dialog for a call not annotated
   read-only (both `contribute` and `proposeEntity` are writes), which can
   take a while or come back `cancelled` — treat `cancelled` as
   outcome-unknown, not a proof the call didn't run.
-- `listTools()` omits `host:` servers outside the app entirely (not even
-  listed as `authStatus: "unknown"`) — the "Check connection" button now
-  checks both `MCP_CONNECTOR_NAME` and `MCP_HOST_SERVER` side by side,
-  which itself is a useful signal: if only one of the two lists at all,
-  that tells you which addressing this client actually recognizes.
 
 ## What's still in the page regardless of outcome
 
 The **"Check connection"** button — a read-only diagnostic
-(`listTools()` against both addressings, dumped via `dumpError()` /
+(`listTools()` against `MCP_CONNECTOR_NAME`, dumped via `dumpError()` /
 `JSON.stringify`) — never calls `contribute` or `proposeEntity`, and stays
-useful either way: to confirm attempt #2 before trusting it with a real
-harvest, or to gather evidence if it also fails.
+useful either way: to confirm the connection before trusting it with a real
+harvest, or to gather evidence if a call fails.
 
 **Why `"SPG MCP Gateway Dev"` specifically:** confirmed (2026-09-24) that
 the connector is installed via a distributed extension file, so its display
@@ -143,5 +157,5 @@ being appropriate for how this connector is actually registered. Attempt
 **What was confirmed working throughout, and remains the fallback:** the
 copy-paste flow end-to-end — a real entity created
 (`ROTHWALD-FENSTERBAU`) and a real fact filed and confirmed searchable in
-dev, correctly attributed. If attempt #2 also fails, every row degrades to
+dev, correctly attributed. If attempt #3 also fails, every row degrades to
 this same paste-back text, per row, automatically.
