@@ -1,4 +1,4 @@
-# The review page's one-click Contribute button — attempt #3 (back to plain-name addressing)
+# The review page's one-click Contribute button — all three addressings confirmed dead
 
 The CTO's original design (`Demo_Contribution_Review_Page.html`) is
 deliberately a "dumb" static file: no backend, no network call, ever — the
@@ -70,20 +70,30 @@ untested theory from the first pass (publish from an actual claude.ai/Desktop
 session could get past the manifest step, the runtime evidence above shows
 there'd be nothing on the other end to call.
 
-**Attempt #3** (2026-09-25, current): with `host:` closed, the user asked to
-revert to attempt #1's plain-name addressing and re-test live, since that
-was the only addressing that ever actually reached the connector — the
+**Attempt #3** (2026-09-25): with `host:` closed, the user asked to revert
+to attempt #1's plain-name addressing and re-test live, since that was the
+only addressing that ever actually reached the connector — the
 `listTools()` evidence above confirms it still resolves to a real server.
 `scripts/render_review_page.py` and `SKILL.md` are back to declaring
 `{ server: "SPG MCP Gateway Dev", tools: [...] }` and calling
 `mcp.server("SPG MCP Gateway Dev")` directly — no `host:` anywhere, and the
 "Check connection" diagnostic now only checks this one addressing (checking
 `host:` too would have been misleading noise now that it's a closed
-question). **Whether attempt #1's `upstream_error` ("connector access isn't
-confirmed for this artifact right now") still reproduces on a real
-`contribute`/`proposeEntity` call has not been re-tested as of this
-writing** — only `listTools()` has been re-confirmed. Test live, on a real
-row, before trusting this with a real harvest.
+question).
+
+**Confirmed dead (2026-09-25):** re-tested live, in the actual Claude
+Desktop app, with a real `contribute` click on a fake-data review page whose
+manifest declared `{ server: "SPG MCP Gateway Dev", tools: [...] }` (this
+time actually published with the capability present — the first Claude Code
+attempt at this same test had accidentally shipped `capabilities: {}`, so
+the code path was never exercised). Result: **the identical
+`upstream_error`** ("connector access isn't confirmed for this artifact
+right now") from the original attempt #1 record below, on the first fresh
+click. Same failure, now reproduced twice, on two different published
+artifacts, weeks apart in method — this is not an artifact-specific fluke or
+a stale-manifest issue. All three addressings this skill has tried
+(`host:`, and plain-name twice) are now closed questions for this
+connector.
 
 Known constraints on `host:` servers in general, per the capability's own
 docs — kept for background, though moot for this specific connector now:
@@ -154,8 +164,11 @@ platform-side gap, specifically the plain connector-name addressing not
 being appropriate for how this connector is actually registered. Attempt
 #2 (`host:` addressing, above) is the direct response to that theory.
 
-**What was confirmed working throughout, and remains the fallback:** the
-copy-paste flow end-to-end — a real entity created
+**What was confirmed working throughout, and remains the only working
+path:** the copy-paste flow end-to-end — a real entity created
 (`ROTHWALD-FENSTERBAU`) and a real fact filed and confirmed searchable in
-dev, correctly attributed. If attempt #3 also fails, every row degrades to
-this same paste-back text, per row, automatically.
+dev, correctly attributed. Since attempt #3 also failed, every row degrades
+to this same paste-back text, per row, automatically — this is not a
+fallback for a rare edge case anymore, it is the only path this skill has
+ever gotten to actually work end-to-end. Any future one-click attempt needs
+a new theory, not a fourth re-try of an addressing already tried twice.

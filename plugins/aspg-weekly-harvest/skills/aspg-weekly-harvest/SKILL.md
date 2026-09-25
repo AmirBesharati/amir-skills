@@ -1,7 +1,7 @@
 ---
 name: aspg-weekly-harvest
-version: 1.4.0
-description: "ASPG Weekly Harvest. Replaces the copy-paste 'Weekly_Harvest_Starter_Prompt.txt' step from the ASPG v3 Contribution Guide with a skill that scans the last 7 days of Outlook mail/calendar/Teams itself, classifies candidate facts (customer/partner signals, opportunity signals, team/people signals, contact signals, vocabulary signals), pre-fills entity-existence and profit-center guesses via ASPG's own tools, and renders a review page with checkboxes and editable wording. The review page's Contribute button attempts a one-click direct submit via the Artifact mcp capability, addressed as the plain connector display name (a host: Desktop-Extension addressing was tried in between and is confirmed dead — see references/mcp-capability.md); on any failure it falls back per-row to a paste-back text block for the chat, and a read-only 'Check connection' diagnostic stays in the page either way. Use when someone asks to 'run my ASPG weekly harvest', 'check what I have to contribute to ASPG this week', 'do my ASPG weekly review', or references the Weekly_Harvest_Starter_Prompt. NOT for the 5-second ad-hoc mode ('Contribute to ASPG: ...') — that already works fine as a plain sentence and this skill doesn't touch it. NOT a replacement for the CTO's own contribution-guide pack or its confidentiality policy — this skill defers to that pack's wording for what's excluded and re-uses ASPG's own server-side filter as the real gate."
+version: 1.4.1
+description: "ASPG Weekly Harvest. Replaces the copy-paste 'Weekly_Harvest_Starter_Prompt.txt' step from the ASPG v3 Contribution Guide with a skill that scans the last 7 days of Outlook mail/calendar/Teams itself, classifies candidate facts (customer/partner signals, opportunity signals, team/people signals, contact signals, vocabulary signals), pre-fills entity-existence and profit-center guesses via ASPG's own tools, and renders a review page with checkboxes and editable wording. The review page's Contribute button attempts a one-click direct submit via the Artifact mcp capability, addressed as the plain connector display name; this is now confirmed non-functional (consistent upstream_error on live re-test, and a host: Desktop-Extension addressing tried in between is also confirmed dead — see references/mcp-capability.md), so expect it to fall back per-row to a paste-back text block for the chat, which is the actual working submission path. A read-only 'Check connection' diagnostic stays in the page either way. Use when someone asks to 'run my ASPG weekly harvest', 'check what I have to contribute to ASPG this week', 'do my ASPG weekly review', or references the Weekly_Harvest_Starter_Prompt. NOT for the 5-second ad-hoc mode ('Contribute to ASPG: ...') — that already works fine as a plain sentence and this skill doesn't touch it. NOT a replacement for the CTO's own contribution-guide pack or its confidentiality policy — this skill defers to that pack's wording for what's excluded and re-uses ASPG's own server-side filter as the real gate."
 metadata:
   requires:
     mcp: []
@@ -13,12 +13,18 @@ metadata:
 Turns the ASPG v3 Contribution Guide's weekly habit from "paste a long prompt
 every time" into a skill: scan → classify → enrich → render a review page →
 one click (or, per-row wherever that fails, the same copy-paste chat step
-as before). The one-click path is on its third attempt — see
-`references/mcp-capability.md` for the full history: plain-name addressing
-first, then a `host:` (Desktop Extension) addressing that turned out to be
-dead (Claude Code refuses to even publish that manifest, and a live
-`listTools()` call against it came back empty), so this reverts to plain-name
-addressing and asks whether the original upstream failure still reproduces.
+as before). **The one-click path has been tried three ways and all three are
+now confirmed dead** — see `references/mcp-capability.md` for the full
+history: plain-name addressing failed live with a consistent
+`upstream_error`; `host:` (Desktop Extension) addressing turned out not to
+exist for this connector at all (Claude Code refuses to even publish that
+manifest, and a live `listTools()` call against it came back empty); reverting
+to plain-name addressing and re-testing live reproduced the identical
+`upstream_error`. The copy-paste fallback is the only path that has ever
+actually worked end-to-end, and Step 6 below still declares the `mcp`
+capability so the page's one-click attempt and "Check connection"
+diagnostic keep working as evidence-gathering tools, not because success is
+expected.
 
 **Scope is deliberately narrow.** This skill owns the weekly-harvest →
 review → contribute flow only. It does not reimplement the guide's 5-second
@@ -149,14 +155,14 @@ capabilities: {
 
 Publish the rendered HTML with the Artifact tool using exactly that
 capability. Tell the person, in one short message: the page is ready, check
-the boxes worth sharing, edit anything you want, hit Contribute — it
-submits directly; if it doesn't work in their client, it'll hand back a
-text block (per row, if only some fail) to paste into this same chat
-instead. Ask them to also try the page's "Check connection" button if
-anything looks wrong, and share what it reports — this addressing failed
-consistently once before with an upstream consent error (see
-`references/mcp-capability.md`), so the first live click after this revert
-is the real test of whether that has changed.
+the boxes worth sharing, edit anything you want, hit Contribute; **the
+one-click submit is confirmed non-functional right now** (consistent
+`upstream_error` on every live re-test — see `references/mcp-capability.md`),
+so expect it to hand back a paste-back text block per row, which is the real
+submission path — paste it into this same chat and Claude will call
+`proposeEntity`/`contribute` from there. Mention the "Check connection"
+button only if they want to help diagnose further; it's read-only evidence
+gathering, not something whose result changes what to do next.
 
 ## Step 7 — if a paste-back happens anyway
 
@@ -183,12 +189,12 @@ then `contribute` per line, same as always. No new logic needed there.
 
 The copy-paste fallback is confirmed working end-to-end on dev: a real
 entity created (`ROTHWALD-FENSTERBAU`) and a real fact filed and confirmed
-searchable, correctly attributed. The one-click path, back on plain-name
-addressing after `host:` was confirmed dead, previously failed live on this
-same addressing with a consistent `upstream_error` ("connector access isn't
-confirmed for this artifact right now") — see `references/mcp-capability.md`
-for the full record. **Re-test live before trusting it** — that failure may
-or may not still reproduce. Before this goes near another colleague, either
-way, the dev pins still need to change to prod, on purpose — see that same
-file for the exact steps, and the "First read" section above for the
-tool-selection rule that has to change alongside it.
+searchable, correctly attributed. **The one-click path is confirmed dead
+across all three addressings tried** (plain-name; `host:`; plain-name
+re-tested) — see `references/mcp-capability.md` for the full record. Rely
+on the copy-paste path as the real submission mechanism; a future fix would
+need a genuinely new theory, not another re-try of an addressing already
+ruled out twice. Before this goes near another colleague, the dev pins
+still need to change to prod, on purpose — see that same file for the exact
+steps, and the "First read" section above for the tool-selection rule that
+has to change alongside it.
