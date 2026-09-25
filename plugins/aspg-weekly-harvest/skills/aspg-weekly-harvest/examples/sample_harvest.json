@@ -1,0 +1,61 @@
+{
+  "_comment": "FAKE data for testing scripts/render_review_page.py only. Fictional companies — Rothwald Fensterbau, Kessler Foerdertechnik, Aurelia Packaging Group, Solvera Partners — are not real SPG customers, prospects, or partners. Never replace this file's content with real harvest output; the harvest step writes its own JSON alongside this one, never over it.",
+  "window_start": "Sep 15",
+  "window_end": "Sep 21, 2026",
+  "sources": "Outlook · Calendar · Teams",
+  "flag_note": null,
+  "profit_centers": [
+    {"code": "D3", "name": "SL - Financial Solutions"},
+    {"code": "D7", "name": "SL - Network & Security"},
+    {"code": "D9", "name": "SL - SPG Tandem"},
+    {"code": "A8", "name": "ShS - Sales"},
+    {"code": "99", "name": "UNDEFINED"}
+  ],
+  "undefined_profit_center": "99",
+  "proposals": [
+    {
+      "category": "customer_prospect",
+      "entity": "Rothwald Fensterbau",
+      "headline": "Rothwald Fensterbau is evaluating a second production-line automation rollout for Q2 2027",
+      "detail": "Raised by their plant manager in the Sep 17 site visit; timeline still loose, budget owner not yet named. SPG contact: Lena Vogt.",
+      "confidence": "asserted",
+      "is_opportunity": true,
+      "profit_center": {"code": "99", "name": "UNDEFINED"},
+      "needs_new_entity": null,
+      "source_note": "Rothwald site-visit notes (2026-09-17-rothwald-visit.md)"
+    },
+    {
+      "category": "customer_prospect",
+      "entity": "Aurelia Packaging Group",
+      "headline": "Aurelia Packaging Group requested a proposal for a Senior DevOps Engineer, remote-first",
+      "detail": "JD received Sep 18; SPG leads Tobias Reindl and Nora Schuster; posting goes live this week.",
+      "confidence": "confirmed",
+      "is_opportunity": true,
+      "profit_center": {"code": "99", "name": "UNDEFINED"},
+      "needs_new_entity": {"name": "AURELIA PACKAGING GROUP", "type": "market"},
+      "source_note": ""
+    },
+    {
+      "category": "vocabulary",
+      "entity": "SPG",
+      "headline": "Infrastructure team picked up an additional on-call rotation slot for the Graz office",
+      "detail": "Approved by Markus Hollenstein; recruiting owner is Julia Brandner; extends the existing rotation, no new mandate.",
+      "confidence": "asserted",
+      "is_opportunity": false,
+      "profit_center": {"code": "D7", "name": "SL - Network & Security"},
+      "needs_new_entity": null,
+      "source_note": ""
+    },
+    {
+      "category": "partner",
+      "entity": "Solvera Partners",
+      "headline": "Solvera Partners may be exploring a second co-build track alongside the current one",
+      "detail": "Mentioned in passing on a Teams call, not yet confirmed by either side — flagged as a heads-up, not a commitment.",
+      "confidence": "rumor",
+      "is_opportunity": false,
+      "profit_center": {"code": "99", "name": "UNDEFINED"},
+      "needs_new_entity": null,
+      "source_note": ""
+    }
+  ]
+}
